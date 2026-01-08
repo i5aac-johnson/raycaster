@@ -49,7 +49,7 @@ worldTextures = [
 playerX = 7.0
 playerY = 7.0
 playerOrient = 45
-speed = 0.1
+speed = 0.067
 
 FOV = 60
 
@@ -98,7 +98,7 @@ def castRay(crIndex):
 
         mapX = floor(rayX)
         mapY = floor(rayY)
-
+            
         if world[mapY][mapX] == "1":
                 stopCast = 1
                          
@@ -110,13 +110,18 @@ def castRay(crIndex):
 
 # LINE DRAW INSTRUCTIONS
 
+distanceLighting = 1
+
 def drawRay(drIndex):
     lineHeight = (lineHeights[drIndex]/2)
-            
-    rayShade = 55 + lineHeight
-    
-    if rayShade > 255:
-        rayShade = 255
+
+    if distanceLighting == 1:
+        rayShade = 55 + lineHeight
+        
+        if rayShade > 255:
+            rayShade = 255
+    else:
+        rayShade = 155
                 
     red = int(0)
     green = int(0)
@@ -137,48 +142,29 @@ def doControls():
     global playerX, playerY, playerOrient
     keys = pygame.key.get_pressed()
 
+    oldX = playerX
+    oldY = playerY
+
     if keys[pygame.K_w]:
-        oldX = playerX
         playerX = playerX + cos(radians(playerOrient)) * speed
-        if world[floor(playerY)][floor(playerX)] == "1":
-            playerX = oldX
-        
-        oldY = playerY
         playerY = playerY + sin(radians(playerOrient)) * speed
-        if world[floor(playerY)][floor(playerX)] == "1":
-            playerY = oldY
         
     if keys[pygame.K_s]:
-        oldX = playerX
         playerX = playerX - cos(radians(playerOrient)) * speed
-        if world[floor(playerY)][floor(playerX)] == "1":
-            playerX = oldX
-        
-        oldY = playerY
         playerY = playerY - sin(radians(playerOrient)) * speed
-        if world[floor(playerY)][floor(playerX)] == "1":
-            playerY = oldY
+
 
     if keys[pygame.K_a]:
-        oldX = playerX
         playerX = playerX + cos(radians(playerOrient-90)) * speed
-        if world[floor(playerY)][floor(playerX)] == "1":
-            playerX = oldX
-
-        oldY = playerY
         playerY = playerY + sin(radians(playerOrient-90)) * speed
-        if world[floor(playerY)][floor(playerX)] == "1":
-            playerY = oldY
         
     if keys[pygame.K_d]:
-        oldX = playerX
         playerX = playerX - cos(radians(playerOrient-90)) * speed
-        if world[floor(playerY)][floor(playerX)] == "1":
-            playerX = oldX
-
-        oldY = playerY
         playerY = playerY - sin(radians(playerOrient-90)) * speed
-        if world[floor(playerY)][floor(playerX)] == "1":
+
+    if world[floor(playerY)][floor(playerX)] == "1":
+            playerX = oldX
+    if world[floor(playerY)][floor(playerX)] == "1":
             playerY = oldY
 
     if keys[pygame.K_LEFT]:
