@@ -24,7 +24,7 @@ world = [
         "100000000000001",
         "100000000110001",
         "100000000110001",
-        "100000000000001",
+        "101000000000001",
         "100000000000001",
         "100000000000001",
         "111111111111111"]
@@ -41,34 +41,34 @@ worldTextures = [
         "200000000000002",
         "200000000320002",
         "200000000230002",
-        "200000000000002",
+        "204000000000002",
         "200000000000002",
         "200000000000002",
         "211111111111112"]
 
 playerX = 7.0
 playerY = 7.0
-playerOrient = 45
+playerOrient = radians(45)
 speed = 0.067
-
-FOV = 60
+rotationSpeed = 2/60
+FOV = radians(60)
 
 # BACKGROUND DRAWING INSTRUCTIONS
 
 skyShade = 0
-skyShadeChange = -0.25
+skyShadeChange = -0.1
 
 def drawBackground():
     global skyShade, skyShadeChange
     
     screen.fill("grey")
 
-    if skyShade == -20:
-        skyShade = -19
-        skyShadeChange = 0.25
-    elif skyShade == 20:
-        skyShade = 19
-        skyShadeChange = -0.25
+    if skyShade < -20:
+        skyShade = -20
+        skyShadeChange = 0.1
+    elif skyShade > 20:
+        skyShade = 20
+        skyShadeChange = -0.1
     else:
         skyShade = skyShade + skyShadeChange
     
@@ -79,49 +79,61 @@ def drawBackground():
 lineHeights = []
 lineColors = []
 rayCount = 0
+hitDirection = ""
 
 def castRay(crIndex):
+    global hitDirection
     stopCast = 0
         
     rayX = playerX
     rayY = playerY
     rayOrient = playerOrient - FOV/2 + (crIndex / viewWidth) * FOV
         
-    dx = cos(radians(rayOrient))
-    dy = sin(radians(rayOrient))
+    dx = cos(playerOrient - FOV/2 + (crIndex / viewWidth) * FOV)
+    dy = sin(playerOrient - FOV/2 + (crIndex / viewWidth) * FOV)
+
+    mapX = floor(rayX)
+    mapY = floor(rayY)
         
     while stopCast == 0:
-        rayStep = 0.05
+        rayStep = 0.01
 
         rayX = (rayX+(dx*rayStep))
         rayY = (rayY+(dy*rayStep))
+
+        oldMapX = mapX
+        oldMapY = mapY
 
         mapX = floor(rayX)
         mapY = floor(rayY)
             
         if world[mapY][mapX] == "1":
-                stopCast = 1
-                         
+            stopCast = 1
+
+    if mapY > oldMapY:
+        hitDirection = "north"
+    elif mapY < oldMapY:
+        hitDirection = "south"
+    elif mapX < oldMapX:
+        hitDirection = "east"
+    elif mapX > oldMapX:
+        hitDirection = "west"
+                     
     distance = sqrt(((rayX-playerX)**2)+((rayY-playerY)**2))
-    distance = distance*(cos(radians(rayOrient - playerOrient)))
+    distance = distance * cos(rayOrient - playerOrient)
                     
     lineHeights.append(580/distance)
     lineColors.append(worldTextures[mapY][mapX])
 
 # LINE DRAW INSTRUCTIONS
 
-distanceLighting = 1
-
 def drawRay(drIndex):
     lineHeight = (lineHeights[drIndex]/2)
 
-    if distanceLighting == 1:
-        rayShade = 55 + lineHeight
-        
-        if rayShade > 255:
-            rayShade = 255
+    if hitDirection in ("north", "south"):
+        rayShade = 200
     else:
-        rayShade = 155
+        rayShade = 150
                 
     red = int(0)
     green = int(0)
@@ -133,6 +145,9 @@ def drawRay(drIndex):
         green = rayShade
     if lineColors[drIndex] == "3":
         blue = rayShade
+    if lineColors[drIndex] == "4":
+        red = rayShade
+        green = rayShade
             
     pygame.draw.line(screen, (red,green,blue), [((drIndex*5))+2,(trueZero-lineHeight)], [((drIndex*5))+2,(trueZero+lineHeight)], width=5)
 
@@ -146,21 +161,21 @@ def doControls():
     oldY = playerY
 
     if keys[pygame.K_w]:
-        playerX = playerX + cos(radians(playerOrient)) * speed
-        playerY = playerY + sin(radians(playerOrient)) * speed
+        playerX = playerX + cos(playerOrient) * speed
+        playerY = playerY + sin(playerOrient) * speed
         
     if keys[pygame.K_s]:
-        playerX = playerX - cos(radians(playerOrient)) * speed
-        playerY = playerY - sin(radians(playerOrient)) * speed
+        playerX = playerX - cos(playerOrient) * speed
+        playerY = playerY - sin(playerOrient) * speed
 
 
     if keys[pygame.K_a]:
-        playerX = playerX + cos(radians(playerOrient-90)) * speed
-        playerY = playerY + sin(radians(playerOrient-90)) * speed
+        playerX = playerX + cos(playerOrient-90) * speed
+        playerY = playerY + sin(playerOrient-90) * speed
         
     if keys[pygame.K_d]:
-        playerX = playerX - cos(radians(playerOrient-90)) * speed
-        playerY = playerY - sin(radians(playerOrient-90)) * speed
+        playerX = playerX - cos(playerOrient-90) * speed
+        playerY = playerY - sin(playerOrient-90) * speed
 
     if world[floor(playerY)][floor(playerX)] == "1":
             playerX = oldX
@@ -171,13 +186,13 @@ def doControls():
         if playerOrient == 0:
             playerOrient = 359
         else:
-            playerOrient = playerOrient - 2
+            playerOrient = playerOrient - rotationSpeed
             
     if keys[pygame.K_RIGHT]:
         if playerOrient == 359:
             playerOrient = 0
         else:
-            playerOrient = playerOrient + 2
+            playerOrient = playerOrient + rotationSpeed
 
 # MAIN PROGRAM LOOP:
 
