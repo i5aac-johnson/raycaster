@@ -22,15 +22,35 @@ world = [
         "100000000000001",
         "100000000000001",
         "100000000000001",
+        "100000002000001",
         "100000000000001",
-        "100000000110001",
-        "100000000110001",
-        "101000000000001",
         "100000000000001",
+        "101100000000001",
+        "101100000000001",
         "100000000000001",
         "111111111111111"]
 
-bricks = [
+textures = [
+        
+        [
+        "6666666666666660",
+        "6666666666666660",
+        "6666666666666660",
+        "0000000000000000",
+        "6666666066666666",
+        "6666666066666666",
+        "6666666066666666",
+        "0000000000000000",
+        "6666666666666660",
+        "6666666666666660",
+        "6666666666666660",
+        "0000000000000000",
+        "6666666066666666",
+        "6666666066666666",
+        "6666666066666666",
+        "0000000000000000"],
+
+        [
         "4444444444444444",
         "4455445544554455",
         "4455445544554455",
@@ -47,6 +67,8 @@ bricks = [
         "4445444544454445",
         "4445444544454445",
         "4445444544454445"]
+        ]
+
 
 colors = [
     "000", # black 0
@@ -104,7 +126,7 @@ def updateMap():
         drawMapX = 0
         topLeftX = displayWidthX + 1
         while drawMapX != len(world[drawMapY]):
-            if world[drawMapY][drawMapX] == "1":
+            if world[drawMapY][drawMapX] != "0":
                 pygame.draw.rect(screen,("red"),(topLeftX, topLeftY, sizePerCell,sizePerCell))  
             topLeftX = topLeftX + sizePerCell
             drawMapX = drawMapX + 1
@@ -134,9 +156,10 @@ sideHit = 0
 xHitLocations = []
 yHitLocations = []
 hitTextLocations = []
+rayTextures = []
 
 def castRay(crIndex):
-    global lineHeights, lineColors, sideHit, hitTextLocations
+    global lineHeights, lineColors, sideHit, hitTextLocations, rayTextures
 
     rayOrient = playerOrient - FOV/2 + (crIndex / viewWidth) * FOV
     startX = playerX
@@ -198,7 +221,7 @@ def castRay(crIndex):
                 xDistance = float('inf')
                 scan = False
             else:
-                if world[mapY][nextCellX] == "1":
+                if world[mapY][nextCellX] != "0":
                     scan = False
                 else:
                     rayX = rayX + stepX
@@ -263,7 +286,7 @@ def castRay(crIndex):
                 yDistance = float('inf')
                 scan = False
             else:
-                if world[nextCellY][mapX] == "1":
+                if world[nextCellY][mapX] != "0":
                     scan = False
                 else:
                     rayY = rayY + stepY
@@ -282,6 +305,12 @@ def castRay(crIndex):
         textX = int((bestRayY % 1) * 16)
         if (stepX < 0):
             textX = 15 - textX
+            mapX = floor(bestRayX)-1
+        else:
+            mapX = floor(bestRayX)
+
+        mapY = floor(bestRayY)
+
         sideHit = 0
     else:
         distance = yDistance
@@ -291,8 +320,15 @@ def castRay(crIndex):
         textX = int((bestRayX % 1) * 16)
         if (stepY > 0):
             textX = 15 - textX
+            mapY = floor(bestRayY)
+        else:
+            mapY = floor(bestRayY)-1
+
+        mapX = floor(bestRayX)
+
         sideHit = 1
 
+    rayTextures.append(int(world[mapY][mapX])-1)
     hitTextLocations.append(textX)
 
     # fisheye correction
@@ -328,8 +364,7 @@ def drawRay(drIndex):
         else:
             rayShade = 105
         
-        textColor = str(colors[int(bricks[lineSegment][hitTextLocations[drIndex]])])
-
+        textColor = str(colors[int(textures[rayTextures[drIndex]][lineSegment][hitTextLocations[drIndex]])])
         if textColor[0] == "1":
             red = 255 - rayShade
         if textColor[1] == "1":
@@ -399,6 +434,7 @@ while running:
     drawBackground()
 
     hitTextLocations = []
+    rayTextures = []
     
     xHitLocations = []
     yHitLocations = []
