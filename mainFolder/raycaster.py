@@ -1,19 +1,8 @@
 import pygame
 from math import sin, cos, tan, floor, ceil, sqrt, radians, pi
-pygame.init()
 
-# GENERAL SETUP:
-
-viewWidth = 128
-displayWidthX = int(viewWidth*5)
-displayWidthY = int(displayWidthX*0.75)
-trueZero = displayWidthY/2
-mapWidth = 15*20
-screen = pygame.display.set_mode((displayWidthX + mapWidth, displayWidthY))
-clock = pygame.time.Clock()
-running = True
-
-world = [
+worlds = [ 
+        [
         "111114511111111",
         "100000000000001",
         "100000000000001",
@@ -28,7 +17,60 @@ world = [
         "102100000000001",
         "101200000000001",
         "100000000000001",
+        "111111111111111"],
+        [
+        "111111111111111",
+        "100000000000001",
+        "100000000000001",
+        "100020000000001",
+        "100020000000001",
+        "100020000000001",
+        "111111111000001",
+        "100000001000001",
+        "100000001000001",
+        "100000001222001",
+        "100000000000001",
+        "100000001222001",
+        "100000001002001",
+        "100000001002001",
         "111111111111111"]
+        ]
+
+# Load default level from worlds array
+defaultLevel = 0
+world = worlds[defaultLevel]
+
+
+# Let user select a level
+validLevelInput = False
+while validLevelInput != True:
+    try:
+        print("Select a level (1-"+ str(len(worlds)) + ")")
+        userInput = int(input())
+        if userInput < 1:
+            print("Invalid input, try again...")
+            print("Select a level (1-"+ str(len(worlds)) + ")")
+            userInput = int(input())
+        else:
+            world = worlds[userInput - 1]
+            break
+    except IndexError or ValueError:
+        print("That level is invalid. Loading level " + str(defaultLevel + 1))
+        world = worlds[defaultLevel]
+        break
+
+pygame.init()
+
+# GENERAL SETUP:
+
+viewWidth = 128
+displayWidthX = int(viewWidth*5)
+displayWidthY = int(displayWidthX*0.75)
+trueZero = displayWidthY/2
+mapWidth = 15*20
+screen = pygame.display.set_mode((displayWidthX + mapWidth, displayWidthY))
+clock = pygame.time.Clock()
+running = True
 
 playerX = 7.0
 playerY = 7.0
