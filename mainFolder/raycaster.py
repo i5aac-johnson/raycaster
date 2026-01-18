@@ -100,6 +100,7 @@ def fetchTexture(fileName,textureID):
     try:
         image = pygame.image.load(fileName)
     except:
+        print("ERROR:",fileName,"was not found")
         image = pygame.image.load("missing.png")
     textures.append([])
     
@@ -431,6 +432,9 @@ while running:
         print("can render world!")
 
     updateMap()
+
+    if firstLoop == 1:
+        print("can draw map!")
 
     pygame.display.flip()
     
