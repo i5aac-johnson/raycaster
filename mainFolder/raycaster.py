@@ -3,28 +3,35 @@ from math import sin, cos, tan, floor, ceil, sqrt, radians, pi
 
 worlds = [ 
         [
-        "111114511111111",
-        "100000000000001",
-        "100000000000001",
-        "100000000000001",
-        "111112000021111",
-        "100000000000001",
-        "100000000000001",
-        "100000000000001",
-        "100000003000001",
-        "100000000000001",
-        "100000000000001",
-        "102100000000001",
-        "101200000000001",
-        "100000000000001",
-        "111111111111111"],
+        "1111145111111110000000",
+        "1700000000000010000000",
+        "6000000000000010000000",
+        "1700000000000010000000",
+        "1111120000211110000000",
+        "1000000000000010000000",
+        "1000000000000010000000",
+        "1000000000000010000000",
+        "1000000000000010000000",
+        "1020000000000010000000",
+        "1020000000000010000000",
+        "1020002000000010000000",
+        "1022222000000010000000",
+        "1000000000707010000000",
+        "1111111111161110000000",
+        "0000000000000002222222",
+        "0000000000000002303032",
+        "0000000000000002700002",
+        "0000000000000006000002",
+        "0000000000000002700002",
+        "0000000000000002030302",
+        "0000000000000002222222"],
         [
         "111111111111111",
         "100000000000001",
         "100000000000001",
         "100020000000001",
-        "100020000000001",
-        "100020000000001",
+        "170720000000001",
+        "116120000000001",
         "111111111000001",
         "100000001000001",
         "100000001000001",
@@ -53,10 +60,12 @@ while validLevelInput != True:
             userInput = int(input())
         else:
             world = worlds[userInput - 1]
+            worldIndex = userInput - 1
             break
     except IndexError or ValueError:
         print("That level is invalid. Loading level " + str(defaultLevel + 1))
         world = worlds[defaultLevel]
+        worldIndex = userInput - 1
         break
 
 pygame.init()
@@ -441,7 +450,17 @@ fetchTexture("wood.png",1)
 fetchTexture("tnt.png",2)
 fetchTexture("weird1.png",3)
 fetchTexture("weird2.png",4)
+fetchTexture("portal.png",5)
+fetchTexture("frame.png",6)
 print("imported textures!")
+
+warpX = [1,16,11,2]
+warpY = [2,18,12,4]
+warpWorld = [0,0,0,1]
+
+warpDestX = [20,7,7,7]
+warpDestY = [18,7,7,7]
+warpDestWorld = [0,0,1,0]
 
 firstLoop = 1
     
@@ -481,6 +500,25 @@ while running:
     pygame.display.flip()
     
     doControls()
+
+    playerMapX = floor(playerX)
+    playerMapY = floor(playerY)
+
+    for teleportIndex in range(len(warpWorld)):
+        if (warpWorld[teleportIndex] == worldIndex and
+            warpX[teleportIndex] == playerMapX and
+            warpY[teleportIndex] == playerMapY):
+
+                teleportWorld = warpDestWorld[teleportIndex]
+                teleportX = warpDestX[teleportIndex]
+                teleportY = warpDestY[teleportIndex]
+
+                print("Teleported the player from (",playerMapX,playerMapY,") in level",worldIndex+1,"to (",teleportX,teleportY,") in level",teleportWorld+1)
+
+                playerX = teleportX
+                playerY = teleportY
+                worldIndex = teleportWorld
+                world = worlds[worldIndex]
     
     clock.tick(64)
 
