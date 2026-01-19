@@ -1,76 +1,17 @@
 import pygame
 from math import sin, cos, tan, floor, ceil, sqrt, radians, pi
 
-worlds = [ 
-        [
-        "1111145111111110000000",
-        "1700000000000010000000",
-        "6000000000000010000000",
-        "1700000000000010000000",
-        "1111120000211110000000",
-        "1000000000000010000000",
-        "1000000000000010000000",
-        "1000000000000010000000",
-        "1000000000000010000000",
-        "1020000000000010000000",
-        "1020000000000010000000",
-        "1020002000000010000000",
-        "1022222000000010000000",
-        "1000000000707010000000",
-        "1111111111161110000000",
-        "0000000000000002222222",
-        "0000000000000002303032",
-        "0000000000000002700002",
-        "0000000000000006000002",
-        "0000000000000002700002",
-        "0000000000000002030302",
-        "0000000000000002222222"],
-        [
-        "111111111111111",
-        "100000000000001",
-        "100000000000001",
-        "100020000000001",
-        "170720000000001",
-        "116120000000001",
-        "111111111000001",
-        "100000001000001",
-        "100000001000001",
-        "100000001222001",
-        "100000000000001",
-        "100000001222001",
-        "100000001002001",
-        "100000001002001",
-        "111111111111111"]
-        ]
+collision = []
+ceilings = []
+walls = []
+floors = []
 
-# Load default level from worlds array
-defaultLevel = 0
-world = worlds[defaultLevel]
-
-
-# Let user select a level
-validLevelInput = False
-while validLevelInput != True:
-    try:
-        print("Select a level (1-"+ str(len(worlds)) + ")")
-        userInput = int(input())
-        if userInput < 1:
-            print("Invalid input, try again...")
-            print("Select a level (1-"+ str(len(worlds)) + ")")
-            userInput = int(input())
-        else:
-            world = worlds[userInput - 1]
-            worldIndex = userInput - 1
-            break
-    except IndexError or ValueError:
-        print("That level is invalid. Loading level " + str(defaultLevel + 1))
-        world = worlds[defaultLevel]
-        worldIndex = userInput - 1
-        break
-
-pygame.init()
+worldIndex = 0
+world = []
 
 # GENERAL SETUP:
+
+pygame.init()
 
 viewWidth = 128
 displayWidthX = int(viewWidth*5)
@@ -79,14 +20,146 @@ trueZero = displayWidthY/2
 mapWidth = 15*20
 screen = pygame.display.set_mode((displayWidthX + mapWidth, displayWidthY))
 clock = pygame.time.Clock()
+FOV = radians(60)
 running = True
+
+# PLAYER VALUES:
 
 playerX = 7.0
 playerY = 7.0
+
+playerMapX = 7
+playerMapY = 7
+
 playerOrient = radians(45)
 speed = 0.067
 rotationSpeed = 2/60
-FOV = radians(60)
+
+# IMPORT LEVEL INSTRUCTIONS
+
+def importWorld(filename):
+    with open(filename) as file:
+        lines = [line.rstrip() for line in file]
+
+    print("importing level data from",filename)
+
+    fileLine = 0
+
+    fileLineOld = fileLine
+    if lines[fileLine] == "collision(":
+        fileLine = 1
+        importCollision = []
+
+        while not lines[fileLine] == ")":
+            importCollision.append(lines[fileLine])
+            fileLine = fileLine + 1
+        collision.append(importCollision)
+        
+        print("imported collision data from",filename,"line",fileLineOld,"to",fileLine)
+
+    else:
+        print("collision data not found")
+
+    fileLine = fileLine + 1
+    fileLineOld = fileLine
+    
+    if lines[fileLine] == "ceilings(":
+        fileLine = fileLine + 1
+        importCeilings = []
+        
+        while not lines[fileLine] == ")":
+            ceilingLine = [int(x) for x in (lines[fileLine].split(','))]
+            
+            importCeilings.append(ceilingLine)
+            fileLine = fileLine + 1
+        ceilings.append(importCeilings)
+        
+        print("imported ceiling texture data from",filename,"line",fileLineOld,"to",fileLine)
+
+    else:
+        print("ceiling texture data not found")
+
+    fileLine = fileLine + 1
+    fileLineOld = fileLine
+    
+    if lines[fileLine] == "walls(":
+        fileLine = fileLine + 1
+        importWalls = []
+        
+        while not lines[fileLine] == ")":
+            wallLine = [int(x) for x in (lines[fileLine].split(','))]
+            
+            importWalls.append(wallLine)
+            fileLine = fileLine + 1
+        walls.append(importWalls)
+        
+        print("imported wall texture data from",filename,"line",fileLineOld,"to",fileLine)
+
+    else:
+        print("wall texture data not found")
+
+    fileLine = fileLine + 1
+    fileLineOld = fileLine
+    
+    if lines[fileLine] == "floors(":
+        fileLine = fileLine + 1
+        importFloors = []
+        
+        while not lines[fileLine] == ")":
+            floorLine = [int(x) for x in (lines[fileLine].split(','))]
+            
+            importFloors.append(floorLine)
+            fileLine = fileLine + 1
+        floors.append(importFloors)
+        
+        print("imported floor texture data from",filename,"line",fileLineOld,"to",fileLine)
+
+    else:
+        print("floor texture data not found")
+
+# SET WARPS:
+
+warpX = [1,16,11,2]
+warpY = [2,18,13,4]
+warpWorld = [0,0,0,1]
+
+warpDestX = [20,7,2,11]
+warpDestY = [18,7,4,13]
+warpDestWorld = [0,0,1,0]
+warpDestOrientation = [90,180,270,270]
+
+# TELEPORT FUNCTION
+
+lockWarp = 0
+oldWarpX = 0
+oldWarpY = 0
+
+def doWarps():
+    global worldIndex, playerX, playerY, world, oldWarpX, oldWarpY, lockWarp, playerOrient
+    for teleportIndex in range(len(warpWorld)):
+        if (warpWorld[teleportIndex] == worldIndex and
+            warpX[teleportIndex] == playerMapX and
+            warpY[teleportIndex] == playerMapY):
+
+                teleportWorld = warpDestWorld[teleportIndex]
+                teleportX = warpDestX[teleportIndex]
+                teleportY = warpDestY[teleportIndex]
+
+                if lockWarp == 0:
+                    print("Teleported the player from (",playerMapX,playerMapY,") in level",worldIndex+1,"to (",teleportX,teleportY,") in level",teleportWorld+1)
+
+                    oldWarpX = teleportX
+                    oldWarpY = teleportY
+                    
+                    playerX = teleportX + 0.5
+                    playerY = teleportY + 0.5
+                    worldIndex = teleportWorld
+                    world = collision[worldIndex]
+                    playerOrient = radians(warpDestOrientation[teleportIndex])
+
+                    lockWarp = 1
+                    print("locked teleportation!")
+                    # we want warps disabled after teleport, until player moves to a different tile.
 
 # BACKGROUND DRAWING INSTRUCTIONS
 
@@ -153,6 +226,8 @@ def fetchTexture(fileName,textureID):
     except:
         print("ERROR:",fileName,"was not found")
         image = pygame.image.load("missing.png")
+    else:
+        print("imported texture data from",fileName)
     textures.append([])
     
     readPixelY = 0
@@ -347,7 +422,7 @@ def castRay(crIndex):
 
         sideHit = 1
 
-    rayTextures.append(int(world[mapY][mapX])-1)
+    rayTextures.append(int(walls[worldIndex][mapY][mapX])-1)
     hitTextLocations.append(textX)
 
     # fisheye correction
@@ -380,13 +455,13 @@ def drawRay(drIndex):
         blue = textures[rayTextures[drIndex]][lineSegment][hitTextLocations[drIndex]][2]
 
         if sideHit == 1:
-            red = red - 50
+            red = red - 30
             if red < 0:
                     red = 0
-            green = green - 50
+            green = green - 30
             if green < 0:
                 green = 0
-            blue = blue - 50
+            blue = blue - 30
             if blue < 0:
                 blue = 0
     
@@ -444,6 +519,13 @@ def doControls():
 
 # MAIN PROGRAM LOOP:
 
+worldFiles = ["myWorld.txt","newWorld.txt"]
+for item in worldFiles:
+    importWorld(item)
+
+world = collision[worldIndex]
+
+
 textures = []
 fetchTexture("cobble.png",0)
 fetchTexture("wood.png",1)
@@ -454,13 +536,30 @@ fetchTexture("portal.png",5)
 fetchTexture("frame.png",6)
 print("imported textures!")
 
-warpX = [1,16,11,2]
-warpY = [2,18,12,4]
-warpWorld = [0,0,0,1]
+# Load default level from worlds array
+defaultLevel = 0
+world = world[defaultLevel]
 
-warpDestX = [20,7,7,7]
-warpDestY = [18,7,7,7]
-warpDestWorld = [0,0,1,0]
+
+# Let user select a level
+validLevelInput = False
+while validLevelInput != True:
+    try:
+        print("Select a level (1-"+ str(len(collision)) + ")")
+        userInput = int(input())
+        if userInput < 1:
+            print("Invalid input, try again...")
+            print("Select a level (1-"+ str(len(collision)) + ")")
+            userInput = int(input())
+        else:
+            world = collision[userInput - 1]
+            worldIndex = userInput - 1
+            break
+    except IndexError or ValueError:
+        print("That level is invalid. Loading level " + str(defaultLevel + 1))
+        world = collision[defaultLevel]
+        worldIndex = userInput - 1
+        break
 
 firstLoop = 1
     
@@ -504,21 +603,13 @@ while running:
     playerMapX = floor(playerX)
     playerMapY = floor(playerY)
 
-    for teleportIndex in range(len(warpWorld)):
-        if (warpWorld[teleportIndex] == worldIndex and
-            warpX[teleportIndex] == playerMapX and
-            warpY[teleportIndex] == playerMapY):
+    if lockWarp == 1:
+        if playerMapX != oldWarpX or playerMapY != oldWarpY:
+            lockWarp = 0
+            print("unlocked teleportation!")
+        
 
-                teleportWorld = warpDestWorld[teleportIndex]
-                teleportX = warpDestX[teleportIndex]
-                teleportY = warpDestY[teleportIndex]
-
-                print("Teleported the player from (",playerMapX,playerMapY,") in level",worldIndex+1,"to (",teleportX,teleportY,") in level",teleportWorld+1)
-
-                playerX = teleportX
-                playerY = teleportY
-                worldIndex = teleportWorld
-                world = worlds[worldIndex]
+    doWarps()
     
     clock.tick(64)
 
