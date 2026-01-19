@@ -123,10 +123,10 @@ warpX = [1,16,11,2]
 warpY = [2,18,13,4]
 warpWorld = [0,0,0,1]
 
-warpDestX = [20,7,2,11]
-warpDestY = [18,7,4,13]
+warpDestX = [16,1,2,11]
+warpDestY = [18,2,4,13]
 warpDestWorld = [0,0,1,0]
-warpDestOrientation = [90,180,270,270]
+warpDestOrientation = [0,0,270,270]
 
 # TELEPORT FUNCTION
 
@@ -146,7 +146,7 @@ def doWarps():
                 teleportY = warpDestY[teleportIndex]
 
                 if lockWarp == 0:
-                    print("Teleported the player from (",playerMapX,playerMapY,") in level",worldIndex+1,"to (",teleportX,teleportY,") in level",teleportWorld+1)
+                    print("teleported the player from (",playerMapX,playerMapY,") in level",worldIndex+1,"to (",teleportX,teleportY,") in level",teleportWorld+1)
 
                     oldWarpX = teleportX
                     oldWarpY = teleportY
@@ -259,135 +259,115 @@ def castRay(crIndex):
     startX = playerX
     startY = playerY
 
-    # SCAN VERTICAL LINES
-
     # which way are we going?
+    # vertical
+    skipVScan = False
     if cos(rayOrient) < 0:
         stepX = -1
     elif cos(rayOrient) > 0:
         stepX = 1
     else:
         stepX = 0
-
     if stepX == 0:
         xDistance = float('inf')
-    else:
+        skipVScan = True
 
-        # what is our gradient?
-        gradient = tan(rayOrient)
-
-        # which line do we intersect next?
-        if stepX == -1:
-            lineX = floor(startX)
-        if stepX == +1:
-            lineX = ceil(startX)
-
-        # how far away is this line on the x axis?
-        distX = lineX - startX
-
-        # what is y when we intersect this line?
-        lineY = startY + (gradient*distX)
-
-        # what is the distance on the hypotenuse to this intersection?
-        lineDistX = sqrt((lineX - startX)**2 + (lineY - startY)**2)
-
-        # how far is it between horizontal lines at this gradient?
-        nextX = lineX + stepX
-        nextDistX = nextX - lineX
-        nextY = lineY + (gradient*nextDistX)
-        nextDist = sqrt((nextX - lineX)**2 + (lineY - startY)**2)
-
-        # scan loop
-        xDistance = lineDistX
-        rayX = lineX
-        rayY = lineY
-        scan = True
-        while scan:
-            # get coord of next cell
-            if stepX == -1:
-                nextCellX = rayX -1
-            else:
-                nextCellX = rayX
-            mapY = floor(rayY)
-
-            # check if we are out of bounds
-            if nextCellX < 0 or nextCellX > (len(world)-1) or mapY < 0 or mapY > (len(world)-1):
-                xDistance = float('inf')
-                scan = False
-            else:
-                if world[mapY][nextCellX] != "0":
-                    scan = False
-                else:
-                    rayX = rayX + stepX
-                    rayY = startY + gradient * (rayX - startX)
-                    xDistance = sqrt((rayX - startX)**2 + (rayY - startY)**2)
-        vRayX = rayX
-        vRayY = rayY
-
-    # SCAN HORIZONTAL LINES
-
-    # which way are we going?
+    # horizontal
+    skipHScan = False
     if sin(rayOrient) < 0:
         stepY = -1
     elif sin(rayOrient) > 0:
         stepY = 1
     else:
         stepY = 0
-
     if stepY == 0:
         yDistance = float('inf')
-    else:
+        skipHScan = True
+
+    if skipVScan == False or skipHScan == False:
 
         # what is our gradient?
-        gradient = 1/tan(rayOrient)
+        vGradient = tan(rayOrient)
+        hGradient = 1/tan(rayOrient)
 
-        # which line do we intersect next?
-        if stepY == -1:
-            lineY = floor(startY)
-        if stepY == +1:
-            lineY = ceil(startY)
+        # which lines do we intersect next?
+        # vertical
+        if stepX == -1:
+            nextVLineX = floor(startX)
+        if stepX == +1:
+            nextVLineX = ceil(startX)
+            
+        distX = nextVLineX - startX # how far away is the next vertical line on the x axis?
 
-        # how far away is this line on the y axis?
-        distY = lineY - startY
-
-        # what is x when we intersect this line?
-        lineX = startX + (gradient*distY)
+        nextVLineY = startY + (vGradient*distX) # what is y when we intersect this line?
 
         # what is the distance on the hypotenuse to this intersection?
-        lineDistY = sqrt((lineY - startY)**2 + (lineX - startX)**2)
+        lineDistX = sqrt((nextVLineX - startX)**2 + (nextVLineY - startY)**2)
+        
+        # horizontal
+        if stepY == -1:
+            nextHLineY = floor(startY)
+        if stepY == +1:
+            nextHLineY = ceil(startY)
 
-        # how far is it between vertical lines at this gradient?
-        nextY = lineY + stepY
-        nextDistY = nextY - lineY
-        nextX = lineX + (gradient*nextDistY)
-        nextDist = sqrt((nextY - lineY)**2 + (lineX - startX)**2)
+        distY = nextHLineY - startY # how far away is the next horizontal line on the y axis?
+        
+        nextHLineX = startX + (hGradient*distY) # what is x when we intersect this line?
+
+        # what is the distance on the hypotenuse to this intersection?
+        lineDistY = sqrt((nextHLineY - startY)**2 + (nextHLineX - startX)**2)
 
         # scan loop
+        xDistance = lineDistX
+        vRayX = nextVLineX
+        vRayY = nextVLineY
+        
         yDistance = lineDistY
-        rayY = lineY
-        rayX = lineX
+        hRayY = nextHLineY
+        hRayX = nextHLineX
+        
         scan = True
         while scan:
-            # get coord of next cell
-            if stepY == -1:
-                nextCellY = rayY -1
-            else:
-                nextCellY = rayY
-            mapX = floor(rayX)
-
-            # check if we are out of bounds
-            if nextCellY < 0 or nextCellY > (len(world)-1) or mapX < 0 or mapX > (len(world)-1):
-                yDistance = float('inf')
-                scan = False
-            else:
-                if world[nextCellY][mapX] != "0":
-                    scan = False
+            # vertical
+            if skipVScan == False and xDistance <= yDistance: # we want to try to loop for the shorter ray
+                if stepX == -1:
+                    nextCellX = vRayX -1
                 else:
-                    rayY = rayY + stepY
-                    rayX = startX + gradient * (rayY - startY)
-                    yDistance = sqrt((rayY - startY)**2 + (rayX - startX)**2)
-        hRayX = rayX
-        hRayY = rayY
+                    nextCellX = vRayX
+                mapY = floor(vRayY)  # get coord of next cell
+
+                if nextCellX < 0 or nextCellX > (len(world)-1) or mapY < 0 or mapY > (len(world)-1):
+                    xDistance = float('inf')
+                    scan = False # check if we are out of bounds
+                else:
+                    if world[mapY][nextCellX] != "0":
+                        scan = False # check for hits
+                    else:
+                        vRayX = vRayX + stepX # step
+                        vRayY = startY + vGradient * (vRayX - startX)
+                        xDistance = sqrt((vRayX - startX)**2 + (vRayY - startY)**2)
+
+            # horizontal
+            elif skipHScan == False and xDistance > yDistance:
+                if stepY == -1:
+                    nextCellY = hRayY -1
+                else:
+                    nextCellY = hRayY
+                mapX = floor(hRayX) # get coord of next cell
+
+                if nextCellY < 0 or nextCellY > (len(world)-1) or mapX < 0 or mapX > (len(world)-1):
+                    yDistance = float('inf')
+                    scan = False # check if we are out of bounds
+                else:
+                    if world[nextCellY][mapX] != "0":
+                        scan = False # check for hits
+                    else:
+                        hRayY = hRayY + stepY # step
+                        hRayX = startX + hGradient * (hRayY - startY)
+                        yDistance = sqrt((hRayY - startY)**2 + (hRayX - startX)**2)
+
+            else:
+                scan = False # break if we don't want to scan at all
         
     # take the distance of the shortest scan  
     
@@ -538,11 +518,19 @@ print("imported textures!")
 
 # Load default level from worlds array
 defaultLevel = 0
-world = world[defaultLevel]
+
+world = collision[defaultLevel]
+worldIndex = defaultLevel
 
 
 # Let user select a level
-validLevelInput = False
+skipLevelSelect = False
+
+if skipLevelSelect == True:
+    validLevelInput = True
+else:
+    validLevelInput = False
+
 while validLevelInput != True:
     try:
         print("Select a level (1-"+ str(len(collision)) + ")")
@@ -616,3 +604,4 @@ while running:
     firstLoop = 0
 
 pygame.quit()
+print("game window was closed")
