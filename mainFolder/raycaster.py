@@ -524,7 +524,7 @@ worldIndex = defaultLevel
 
 
 # Let user select a level
-skipLevelSelect = False
+skipLevelSelect = True
 
 while skipLevelSelect != True:
     try:
