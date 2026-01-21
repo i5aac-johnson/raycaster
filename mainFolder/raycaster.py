@@ -524,14 +524,9 @@ worldIndex = defaultLevel
 
 
 # Let user select a level
-skipLevelSelect = False
+skipLevelSelect = True
 
-if skipLevelSelect == True:
-    validLevelInput = True
-else:
-    validLevelInput = False
-
-while validLevelInput != True:
+while skipLevelSelect != True:
     try:
         print("Select a level (1-"+ str(len(collision)) + ")")
         userInput = int(input())
