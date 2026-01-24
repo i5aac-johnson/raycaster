@@ -21,6 +21,8 @@ mapWidth = 15*20
 screen = pygame.display.set_mode((displayWidthX + mapWidth, displayWidthY))
 clock = pygame.time.Clock()
 FOV = radians(60)
+planeDistance = displayWidthX / ((2*tan(FOV/2)))
+
 running = True
 
 # PLAYER VALUES:
@@ -60,18 +62,18 @@ def importWorld(filename):
     else:
         print("collision data not found")
 
-    fileLine = fileLine + 1
+    fileLine += 1
     fileLineOld = fileLine
     
     if lines[fileLine] == "ceilings(":
-        fileLine = fileLine + 1
+        fileLine += 1
         importCeilings = []
         
         while not lines[fileLine] == ")":
             ceilingLine = [int(x) for x in (lines[fileLine].split(','))]
             
             importCeilings.append(ceilingLine)
-            fileLine = fileLine + 1
+            fileLine += 1
         ceilings.append(importCeilings)
         
         print("imported ceiling texture data from",filename,"line",fileLineOld,"to",fileLine)
@@ -83,14 +85,14 @@ def importWorld(filename):
     fileLineOld = fileLine
     
     if lines[fileLine] == "walls(":
-        fileLine = fileLine + 1
+        fileLine += 1
         importWalls = []
         
         while not lines[fileLine] == ")":
             wallLine = [int(x) for x in (lines[fileLine].split(','))]
             
             importWalls.append(wallLine)
-            fileLine = fileLine + 1
+            fileLine += 1
         walls.append(importWalls)
         
         print("imported wall texture data from",filename,"line",fileLineOld,"to",fileLine)
@@ -98,18 +100,18 @@ def importWorld(filename):
     else:
         print("wall texture data not found")
 
-    fileLine = fileLine + 1
+    fileLine += 1
     fileLineOld = fileLine
     
     if lines[fileLine] == "floors(":
-        fileLine = fileLine + 1
+        fileLine += 1
         importFloors = []
         
         while not lines[fileLine] == ")":
             floorLine = [int(x) for x in (lines[fileLine].split(','))]
             
             importFloors.append(floorLine)
-            fileLine = fileLine + 1
+            fileLine += 1
         floors.append(importFloors)
         
         print("imported floor texture data from",filename,"line",fileLineOld,"to",fileLine)
@@ -186,38 +188,35 @@ def drawBackground():
 # MAP DRAWING INSTRUCTIONS
 
 def updateMap():
-    global world, playerX, playerY, xHitLocations, yHitLocations
+    global world, playerX, playerY, xHitLocation, yHitLocation
     sizePerCell = mapWidth/len(world[0])
 
     topLeftY = 0
-    drawMapY = 0
-    while drawMapY != len(world):
+    for drawMapY in range(0,len(world)):
         drawMapX = 0
         topLeftX = displayWidthX + 1
-        while drawMapX != len(world[drawMapY]):
+        for drawMapX in range(0,len(world[drawMapY])):
             if world[drawMapY][drawMapX] != "0":
                 pygame.draw.rect(screen,("red"),(topLeftX, topLeftY, sizePerCell,sizePerCell))  
-            topLeftX = topLeftX + sizePerCell
-            drawMapX = drawMapX + 1
+            topLeftX += sizePerCell
 
-        topLeftY = topLeftY + sizePerCell
-        drawMapY = drawMapY + 1
+        topLeftY += sizePerCell
 
     drawPlayerX = displayWidthX + (playerX * sizePerCell)
     drawPlayerY = playerY * sizePerCell
 
     drawMapLine = 0
-    while drawMapLine != len(xHitLocations):
+    for drawMapLine in range(0,len(xHitLocations)):
         drawLineX = displayWidthX + (xHitLocations[drawMapLine] * sizePerCell)
         drawLineY = yHitLocations[drawMapLine] * sizePerCell
         pygame.draw.aaline(screen, ("grey"), (drawPlayerX, drawPlayerY),(drawLineX, drawLineY))
-        drawMapLine = drawMapLine + 1
         
     pygame.draw.circle(screen, ('white'), (drawPlayerX, drawPlayerY), 5)
 
 # IMPORT TEXTURES FROM PNG
 
 textures = []
+textureSize = 16
 textures.append(["placeholder"])
 
 def fetchTexture(fileName,textureID):
@@ -230,30 +229,20 @@ def fetchTexture(fileName,textureID):
         print("imported texture data from",fileName)
     textures.append([])
     
-    readPixelY = 0
-    while not readPixelY == 16:
+    for readPixelY in range(0, textureSize):
         textures[textureID].append([])
         readPixelX = 0
-        while not readPixelX == 16:
+        for readPixelX in range(0, textureSize):
             thisColor = image.get_at((readPixelX, readPixelY))
-            
             textures[textureID][readPixelY].append(thisColor)
-            
-            readPixelX = readPixelX + 1
-        readPixelY = readPixelY + 1
 
 # RAYCASTING ALGORITHM:
 
-lineHeights = []
-rayCount = 0
-sideHit = 0
 xHitLocations = []
 yHitLocations = []
-hitTextLocations = []
-rayTextures = []
+rayCount = 0
 
 def castRay(crIndex):
-    global lineHeights, lineColors, sideHit, hitTextLocations, rayTextures
 
     rayOrient = playerOrient - FOV/2 + (crIndex / viewWidth) * FOV
     startX = playerX
@@ -362,7 +351,7 @@ def castRay(crIndex):
                     if world[nextCellY][mapX] != "0":
                         scan = False # check for hits
                     else:
-                        hRayY = hRayY + stepY # step
+                        hRayY += stepY # step
                         hRayX = startX + hGradient * (hRayY - startY)
                         yDistance = sqrt((hRayY - startY)**2 + (hRayX - startX)**2)
 
@@ -402,37 +391,37 @@ def castRay(crIndex):
 
         sideHit = 1
 
-    rayTextures.append(int(walls[worldIndex][mapY][mapX])-1)
-    hitTextLocations.append(textX)
+    xHitLocations.append(bestRayX)
+    yHitLocations.append(bestRayY)
+
+    rayTexture = (int(walls[worldIndex][mapY][mapX])-1)
 
     # fisheye correction
     distance = distance*cos(rayOrient - playerOrient)
 
     # add to our output
     if distance == 0:
-        lineHeights.append(580)
+        lineHeight = 580
     else:
-        lineHeights.append(580/distance)
+        lineHeight = 580/distance
 
-    xHitLocations.append(bestRayX)
-    yHitLocations.append(bestRayY)
+    return (sideHit, rayTexture, textX, lineHeight, bestRayX, bestRayY)
 
 # LINE DRAW INSTRUCTIONS
 
-def drawRay(drIndex):
+def drawRay(drIndex, sideHit, rayTexture, textX, lineHeight, bestRayX, bestRayY):
     global blue
     
-    lineHeight = (lineHeights[drIndex]/2)
+    lineHeight = (lineHeight/2)
 
     lineSegment = int(0)
     segmentStartY = trueZero - lineHeight
     segmentHeight = ((lineHeight*2)/16)
-    
-    while lineSegment != 16:
-        
-        red = textures[rayTextures[drIndex]][lineSegment][hitTextLocations[drIndex]][0]
-        green = textures[rayTextures[drIndex]][lineSegment][hitTextLocations[drIndex]][1] 
-        blue = textures[rayTextures[drIndex]][lineSegment][hitTextLocations[drIndex]][2]
+
+    for lineSegment in range(0,textureSize):
+        red = textures[rayTexture][lineSegment][textX][0]
+        green = textures[rayTexture][lineSegment][textX][1] 
+        blue = textures[rayTexture][lineSegment][textX][2]
 
         if sideHit == 1:
             red = red - 30
@@ -447,8 +436,7 @@ def drawRay(drIndex):
     
         pygame.draw.line(screen, (red,green,blue), [((drIndex*5))+2,(segmentStartY)], [((drIndex*5))+2,(segmentStartY+segmentHeight)], width=5)
 
-        segmentStartY = segmentStartY + segmentHeight
-        lineSegment = lineSegment + 1
+        segmentStartY += segmentHeight
 
 # CONTROLS AND COLLISION
 
@@ -460,34 +448,34 @@ def doControls():
     oldY = playerY
 
     if keys[pygame.K_w]:
-        playerX = playerX + cos(playerOrient) * speed
+        playerX += cos(playerOrient) * speed
         if world[floor(playerY)][floor(playerX)] != "0":
             playerX = oldX
-        playerY = playerY + sin(playerOrient) * speed
+        playerY += sin(playerOrient) * speed
         if world[floor(playerY)][floor(playerX)] != "0":
             playerY = oldY
         
     if keys[pygame.K_s]:
-        playerX = playerX - cos(playerOrient) * speed
+        playerX -= cos(playerOrient) * speed
         if world[floor(playerY)][floor(playerX)] != "0":
             playerX = oldX
-        playerY = playerY - sin(playerOrient) * speed
+        playerY -= sin(playerOrient) * speed
         if world[floor(playerY)][floor(playerX)] != "0":
             playerY = oldY
 
     if keys[pygame.K_a]:
-        playerX = playerX + cos(playerOrient-radians(90)) * speed
+        playerX += cos(playerOrient-radians(90)) * speed
         if world[floor(playerY)][floor(playerX)] != "0":
             playerX = oldX
-        playerY = playerY + sin(playerOrient-radians(90)) * speed
+        playerY += sin(playerOrient-radians(90)) * speed
         if world[floor(playerY)][floor(playerX)] != "0":
             playerY = oldY
         
     if keys[pygame.K_d]:
-        playerX = playerX - cos(playerOrient-radians(90)) * speed
+        playerX -= cos(playerOrient-radians(90)) * speed
         if world[floor(playerY)][floor(playerX)] != "0":
             playerX = oldX
-        playerY = playerY - sin(playerOrient-radians(90)) * speed
+        playerY -= sin(playerOrient-radians(90)) * speed
         if world[floor(playerY)][floor(playerX)] != "0":
             playerY = oldY
 
@@ -556,20 +544,12 @@ while running:
     if firstLoop == 1:
         print("can draw background!")
 
-    hitTextLocations = []
-    rayTextures = []
-    
     xHitLocations = []
     yHitLocations = []
     
-    lineHeights = []
-    lineColors = []
-    rayCount = 0
-    
-    while not rayCount == 128:
-        castRay(rayCount)
-        drawRay(rayCount)
-        rayCount = rayCount + 1
+    for rayCount in range(0,viewWidth):
+        sideHit, rayTexture, textX, lineHeight, bestRayX, bestRayY = castRay(rayCount)
+        drawRay(rayCount, sideHit, rayTexture, textX, lineHeight, bestRayX, bestRayY)
 
     if firstLoop == 1:
         print("can render world!")
