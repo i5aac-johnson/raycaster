@@ -227,14 +227,15 @@ def fetchTexture(fileName,textureID):
         image = pygame.image.load("missing.png")
     else:
         print("imported texture data from",fileName)
-    textures.append([])
+        
+    texture = []
     
     for readPixelY in range(0, textureSize):
-        textures[textureID].append([])
-        readPixelX = 0
+        texture.append([])
         for readPixelX in range(0, textureSize):
-            thisColor = image.get_at((readPixelX, readPixelY))
-            textures[textureID][readPixelY].append(thisColor)
+            texture[readPixelY].append(image.get_at((readPixelX, readPixelY)))
+
+    return texture
 
 # RAYCASTING ALGORITHM:
 
@@ -243,7 +244,6 @@ yHitLocations = []
 rayCount = 0
 
 def castRay(crIndex):
-
     rayOrient = playerOrient - FOV/2 + (crIndex / viewWidth) * FOV
     startX = playerX
     startY = playerY
@@ -319,10 +319,9 @@ def castRay(crIndex):
         while scan:
             # vertical
             if skipVScan == False and xDistance <= yDistance: # we want to try to loop for the shorter ray
+                nextCellX = vRayX
                 if stepX == -1:
-                    nextCellX = vRayX -1
-                else:
-                    nextCellX = vRayX
+                    nextCellX -= 1
                 mapY = floor(vRayY)  # get coord of next cell
 
                 if nextCellX < 0 or nextCellX > (len(world)-1) or mapY < 0 or mapY > (len(world)-1):
@@ -338,10 +337,9 @@ def castRay(crIndex):
 
             # horizontal
             elif skipHScan == False and xDistance > yDistance:
+                nextCellY = hRayY
                 if stepY == -1:
-                    nextCellY = hRayY -1
-                else:
-                    nextCellY = hRayY
+                    nextCellY -= 1
                 mapX = floor(hRayX) # get coord of next cell
 
                 if nextCellY < 0 or nextCellY > (len(world)-1) or mapX < 0 or mapX > (len(world)-1):
@@ -396,22 +394,20 @@ def castRay(crIndex):
 
     rayTexture = (int(walls[worldIndex][mapY][mapX])-1)
 
-    # fisheye correction
-    distance = distance*cos(rayOrient - playerOrient)
-
     # add to our output
-    if distance == 0:
-        lineHeight = 580
-    else:
-        lineHeight = 580/distance
+    lineHeight = 580
+    if distance != 0:
+        lineHeight = 580/(distance*cos(rayOrient - playerOrient)) # fisheye correction
 
     return (sideHit, rayTexture, textX, lineHeight, bestRayX, bestRayY)
+
+# DRAW FLOORS
+
+playerHeight = 0.5
 
 # LINE DRAW INSTRUCTIONS
 
 def drawRay(drIndex, sideHit, rayTexture, textX, lineHeight, bestRayX, bestRayY):
-    global blue
-    
     lineHeight = (lineHeight/2)
 
     lineSegment = int(0)
@@ -440,50 +436,46 @@ def drawRay(drIndex, sideHit, rayTexture, textX, lineHeight, bestRayX, bestRayY)
 
 # CONTROLS AND COLLISION
 
-def doControls():
-    global playerX, playerY, playerOrient
-    keys = pygame.key.get_pressed()
+def doControls(keys,x,y,orient,axis):
 
-    oldX = playerX
-    oldY = playerY
+    if axis == 0:
+        output = x
+    if axis == 1:
+        output = y
+    oldPos = output
 
     if keys[pygame.K_w]:
-        playerX += cos(playerOrient) * speed
-        if world[floor(playerY)][floor(playerX)] != "0":
-            playerX = oldX
-        playerY += sin(playerOrient) * speed
-        if world[floor(playerY)][floor(playerX)] != "0":
-            playerY = oldY
+        output += cos(orient) * speed if axis == 0 else sin(orient) * speed
+        if (world[floor(y)][floor(output)] != "0" and axis == 0) or (world[floor(output)][floor(x)] != "0" and axis == 1):
+            output = oldPos
         
     if keys[pygame.K_s]:
-        playerX -= cos(playerOrient) * speed
-        if world[floor(playerY)][floor(playerX)] != "0":
-            playerX = oldX
-        playerY -= sin(playerOrient) * speed
-        if world[floor(playerY)][floor(playerX)] != "0":
-            playerY = oldY
+        output -= cos(orient) * speed if axis == 0 else sin(orient) * speed
+        if (world[floor(y)][floor(output)] != "0" and axis == 0) or (world[floor(output)][floor(x)] != "0" and axis == 1):
+            output = oldPos
 
     if keys[pygame.K_a]:
-        playerX += cos(playerOrient-radians(90)) * speed
-        if world[floor(playerY)][floor(playerX)] != "0":
-            playerX = oldX
-        playerY += sin(playerOrient-radians(90)) * speed
-        if world[floor(playerY)][floor(playerX)] != "0":
-            playerY = oldY
+        output += cos(orient-radians(90)) * speed if axis == 0 else sin(orient-radians(90)) * speed
+        if (world[floor(y)][floor(output)] != "0" and axis == 0) or (world[floor(output)][floor(x)] != "0" and axis == 1):
+            output = oldPos
         
     if keys[pygame.K_d]:
-        playerX -= cos(playerOrient-radians(90)) * speed
-        if world[floor(playerY)][floor(playerX)] != "0":
-            playerX = oldX
-        playerY -= sin(playerOrient-radians(90)) * speed
-        if world[floor(playerY)][floor(playerX)] != "0":
-            playerY = oldY
+        output -= cos(orient-radians(90)) * speed if axis == 0 else sin(orient-radians(90)) * speed
+        if (world[floor(y)][floor(output)] != "0" and axis == 0) or (world[floor(output)][floor(x)] != "0" and axis == 1):
+            output = oldPos
+
+    return output
+
+def doRoatation(keys,orient):
+    output = orient
 
     if keys[pygame.K_LEFT]:
-        playerOrient = (playerOrient - rotationSpeed) % (2*pi)
+        output = (orient - rotationSpeed) % (2*pi)
             
     if keys[pygame.K_RIGHT]:
-        playerOrient = (playerOrient + rotationSpeed) % (2*pi)
+        output = (orient + rotationSpeed) % (2*pi)
+
+    return(output)
 
 # MAIN PROGRAM LOOP:
 
@@ -493,15 +485,12 @@ for item in worldFiles:
 
 world = collision[worldIndex]
 
+importTextures = "cobble.png", "wood.png", "tnt.png", "weird1.png", "weird2.png", "portal.png", "frame.png", "whiteFloor.png", "blackFloor.png"
 
 textures = []
-fetchTexture("cobble.png",0)
-fetchTexture("wood.png",1)
-fetchTexture("tnt.png",2)
-fetchTexture("weird1.png",3)
-fetchTexture("weird2.png",4)
-fetchTexture("portal.png",5)
-fetchTexture("frame.png",6)
+for i in range(0,len(importTextures)):
+    textures.append(fetchTexture(importTextures[i],i))
+
 print("imported textures!")
 
 # Load default level from worlds array
@@ -560,9 +549,13 @@ while running:
         print("can draw map!")
 
     pygame.display.flip()
-    
-    doControls()
 
+    keys = pygame.key.get_pressed()
+    
+    playerX = doControls(keys,playerX,playerY,playerOrient,0)
+    playerY = doControls(keys,playerX,playerY,playerOrient,1)
+    playerOrient = doRoatation(keys, playerOrient)
+    
     playerMapX = floor(playerX)
     playerMapY = floor(playerY)
 
@@ -570,13 +563,13 @@ while running:
         if playerMapX != oldWarpX or playerMapY != oldWarpY:
             lockWarp = 0
             print("unlocked teleportation!")
-        
-
-    doWarps()
+    else:
+        doWarps()
     
     clock.tick(64)
 
-    firstLoop = 0
+    if firstLoop == 1:
+        firstLoop = 0
 
 pygame.quit()
 print("game window was closed")
